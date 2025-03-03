@@ -93,7 +93,7 @@ dist
 
 # Gatsby files
 .cache/
-# Comment in the public line in if your project uses Gatsby and not Next.js
+# Comment in the public line if your project uses Gatsby and not Next.js
 # https://nextjs.org/blog/next-9-1#public-directory-support
 # public
 
@@ -128,5 +128,17 @@ dist
 .yarn/build-state.yml
 .yarn/install-state.gz
 .pnp.*
+
+# WhatsApp Web.js session and cache files
+.wwebjs_auth/
+.wwebjs_cache/
+
+# Optionally keep folder, but ignore its content
+# .wwebjs_auth/*
+# !.wwebjs_auth/.gitkeep
+
+# Node modules (дублируется для верности)
 node_modules/
+
+# .env files (повтор для верности)
 .env

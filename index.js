@@ -16,18 +16,30 @@ const regionLinks = {
 };
 
 const videoLinks = {
-    budgetPlanning: { '1': 'https://www.youtube.com/watch?v=GzjaSix006s', '2': 'https://www.youtube.com/watch?v=r0vhgW3alQE' },
-    budgetExecution: { '1': 'https://www.youtube.com/watch?v=1LU3cm020mo', '2': 'https://www.youtube.com/watch?v=FnQUHdAF9pI' },
+    budgetPlanning: {
+        '1': 'https://www.youtube.com/watch?v=GzjaSix006s',
+        '2': 'https://www.youtube.com/watch?v=r0vhgW3alQE',
+        '3': 'https://www.youtube.com/watch?v=0YDfPnUejeg',
+        '4': 'https://www.youtube.com/watch?v=z4H_ozpMSq4',
+        '5': 'https://www.youtube.com/watch?v=btpCmqzFcnw'
+    },
+    budgetExecution: {
+        '1': 'https://www.youtube.com/watch?v=1LU3cm020mo',
+        '2': 'https://www.youtube.com/watch?v=FnQUHdAF9pI',
+        '3': 'https://www.youtube.com/watch?v=lFoY3fKLUVk',
+        '4': 'https://www.youtube.com/watch?v=6OR4ztOq9mU',
+        '5': 'https://www.youtube.com/watch?v=HHZv7tKh3cM',
+    },
     signers: 'https://www.youtube.com/watch?v=tiCEv958CQ8&list=PL4jwFLRAXDimzcqnIRqROqSLzYREpiYZX&index=5'
 };
 
 let userState = {};
 let inactivityTimers = {};
 
-client.on('qr', (qr) => qrcode.generate(qr, { small: true }));
+client.on('qr', qr => qrcode.generate(qr, { small: true }));
 client.on('ready', () => console.log('FAQ_Bot готов к работе!'));
 
-client.on('message', async (msg) => {
+client.on('message', async msg => {
     const chatId = msg.from;
     const message = msg.body.trim();
 
@@ -108,7 +120,8 @@ async function sendMainMenu(chatId) {
     const menu = `
 Добро пожаловать в службу поддержки eAkimat365.
 
-Выберите интересующий вас раздел или задайте свой вопрос:
+Выберите интересующий вас раздел:
+
 1️⃣ Как зайти в eAkimat365?
 2️⃣ Бюджетное планирование / Бюджетные заявки
 3️⃣ Исполнение бюджета
@@ -125,6 +138,7 @@ async function sendMainMenu(chatId) {
 async function sendRegionMenu(chatId) {
     const menu = `
 Выберите область РК:
+
 1️⃣ Павлодарская область
 2️⃣ Карагандинская область
 3️⃣ Улытауская область
@@ -142,67 +156,21 @@ async function sendLoginInstructions(chatId, region) {
     const message = `
 📌 Инструкция по входу в систему eAkimat365 (${region.name})
 🌐 Ссылка: ${region.link}
-🔑 Способы входа: ЭЦП или ИИН+пароль (12345)
 
+🔑 Способы входа: ЭЦП или ИИН+пароль
+
+1. Вход с помощью ЭЦП
+👉 Выберите вход по ЭЦП пользователя, зарегистрированного в системе eAkimat365.
+🔐 Введите пароль от ключа.
+
+2. Вход по ИИН и паролю
+👉 Выберите вход по ИИН и паролю.
+🔐 Введите ваш ИИН и пароль.
+
+❓ Если вы заходите в систему впервые, используйте стандартный пароль: 12345
+
+💡 Важно: Если у вас возникли трудности со входом, обратитесь в техподдержку:
 📧 help@csi.kz
-📞 +7 (7172) 97-22-42, +7 (778) 021-13-17
-
-🔙 Для возврата в меню отправьте 0️⃣
-    `;
-    await client.sendMessage(chatId, message);
-}
-
-async function sendBudgetPlanningMenu(chatId) {
-    const menu = `
-Бюджетное планирование:
-1️⃣ Формирование заявок
-2️⃣ Корректировка бюджета
-
-🔙 Для возврата в меню отправьте 0️⃣
-    `;
-    await client.sendMessage(chatId, menu);
-}
-
-async function sendBudgetExecutionMenu(chatId) {
-    const menu = `
-Исполнение бюджета:
-1️⃣ Индивидуальный план
-2️⃣ План финансирования
-
-🔙 Для возврата в меню отправьте 0️⃣
-    `;
-    await client.sendMessage(chatId, menu);
-}
-
-async function sendSignersMenu(chatId) {
-    const message = `
-📺 Видео-инструкция по работе с подписантами:
-${videoLinks.signers}
-
-🔙 Для возврата в меню отправьте 0️⃣
-    `;
-    await client.sendMessage(chatId, message);
-}
-
-async function sendRegionContacts(chatId) {
-    const contacts = `
-Контакты консультантов по областям:
-1️⃣ Павлодарская область
-2️⃣ Карагандинская область
-3️⃣ Улытауская область
-4️⃣ Западно-Казахстанская область
-5️⃣ Мангистауская область
-6️⃣ Акмолинская область
-7️⃣ Актюбинская область
-
-🔙 Для возврата в меню отправьте 0️⃣
-    `;
-    await client.sendMessage(chatId, contacts);
-}
-
-async function sendTechnicalSupportContacts(chatId) {
-    const message = `
-📧 Техподдержка: help@csi.kz
 📞 +7 (7172) 97-22-42
 📞 +7 (778) 021-13-17
 
@@ -211,13 +179,62 @@ async function sendTechnicalSupportContacts(chatId) {
     await client.sendMessage(chatId, message);
 }
 
+async function sendBudgetPlanningMenu(chatId) {
+    await client.sendMessage(chatId, `
+Бюджетное планирование:
+1️⃣ Свод по АБП/ГУ/ГККП
+2️⃣ Форма расчетов
+3️⃣ Штатное расписание
+4️⃣ Бюджетные инвестиционные проекты
+5️⃣ Бюджетные программы
+
+🔙 Для возврата в меню отправьте 0️⃣
+    `);
+}
+
+async function sendBudgetExecutionMenu(chatId) {
+    await client.sendMessage(chatId, `
+Исполнение бюджета:
+1️⃣ Формирование / Индивидуальный план финансирования
+2️⃣ Формирование / План финансирования
+3️⃣ Заявки на внесение изменений / Заявки, Справки
+4️⃣ Заявки на внесение изменений / Уточненный план
+5️⃣ Мониторинг исполнения. Казначейские формы
+
+🔙 Для возврата в меню отправьте 0️⃣
+    `);
+}
+
+async function sendSignersMenu(chatId) {
+    await client.sendMessage(chatId, `
+📺 Видео-инструкция по работе с подписантами:
+${videoLinks.signers}
+
+🔙 Для возврата в меню отправьте 0️⃣
+    `);
+}
+
+async function sendRegionContacts(chatId) {
+    await sendRegionMenu(chatId);  // Можно сразу показать выбор регионов
+}
+
+async function sendTechnicalSupportContacts(chatId) {
+    await client.sendMessage(chatId, `
+📧 Техподдержка: help@csi.kz
+📞 +7 (7172) 97-22-42
+📞 +7 (778) 021-13-17
+
+🔙 Для возврата в меню отправьте 0️⃣
+    `);
+}
+
 async function sendOperatorModeMessage(chatId) {
-    const message = `
+    await client.sendMessage(chatId, `
 🕒 Пожалуйста, подождите. Оператор скоро свяжется с вами.
 💬 Вы можете отправлять свои вопросы, и оператор ответит как можно скорее.
+
 🔙 Для возврата в меню отправьте 0️⃣
-    `;
-    await client.sendMessage(chatId, message);
+    `);
 }
 
 function resetInactivityTimer(chatId) {
@@ -226,7 +243,7 @@ function resetInactivityTimer(chatId) {
 }
 
 async function returnToMainMenuAfterInactivity(chatId) {
-    await client.sendMessage(chatId, '⏳ Чат был неактивен в течение 1 часа. Возвращаем вас в главное меню.');
+    await client.sendMessage(chatId, '⏳ Чат был неактивен 1 час. Возвращаем вас в главное меню.');
     userState[chatId] = 'MAIN_MENU';
     await sendMainMenu(chatId);
 }

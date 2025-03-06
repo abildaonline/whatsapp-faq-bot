@@ -77,7 +77,13 @@ const videoLinks = {
         '4': 'https://www.youtube.com/watch?v=6OR4ztOq9mU',
         '5': 'https://www.youtube.com/watch?v=HHZv7tKh3cM'
     },
-    signers: 'https://www.youtube.com/watch?v=tiCEv958CQ8&list=PL4jwFLRAXDimzcqnIRqROqSLzYREpiYZX&index=5'
+    popularQuestions: {
+        '1': 'https://youtu.be/5EfL8z5x3nM',
+        '2': 'https://youtu.be/jkuTdRfkusM',
+        '3': 'https://youtu.be/s2T0HrR1JIk',
+        '4': 'https://youtu.be/qjCZKNWQ3u8',
+        '5': 'https://youtu.be/GkRHVqFNzz4'
+    }
 };
 
 let userState = {};
@@ -92,55 +98,76 @@ client.on('message', async msg => {
 
     resetInactivityTimer(chatId);
 
+    // Инициализация состояния пользователя, если оно отсутствует
     if (!userState[chatId]) {
         userState[chatId] = 'MAIN_MENU';
         await sendMainMenu(chatId);
         return;
     }
 
+    // Возврат в главное меню при вводе 0
     if (message === '0') {
         userState[chatId] = 'MAIN_MENU';
         await sendMainMenu(chatId);
         return;
     }
-    
-    // Если пользователь нигде не застрял и не в процессе выбора (например, после контактов техподдержки)
-    if (userState[chatId] === undefined) {
-        client.sendMessage(chatId, '❌ Неверный ввод. Пожалуйста, отправьте 0️⃣ для возврата в главное меню 🔙');
+
+    // Проверка на случай, если состояние пользователя вдруг отсутствует (практически невозможно)
+    if (!userState[chatId]) {
+        await client.sendMessage(chatId, '❌ Неверный ввод. Пожалуйста, отправьте 0️⃣ для возврата в главное меню 🔙');
         return;
     }
-    
 
     switch (userState[chatId]) {
+        // 🏠 Главное меню
         case 'MAIN_MENU':
             await handleMainMenuSelection(chatId, message);
             break;
-            case 'BUDGET_PLANNING':
-                await sendVideo(chatId, videoLinks.budgetPlanning[message]);
-                await sendBudgetPlanningMenu(chatId);
-                break;
-            case 'BUDGET_EXECUTION':
-                await sendVideo(chatId, videoLinks.budgetExecution[message]);
-                await sendBudgetExecutionMenu(chatId);
-                break;
+    
+        // 💰 Бюджетное планирование
+        case 'BUDGET_PLANNING':
+            await handleVideoSelection(chatId, message, 'budgetPlanning', sendBudgetPlanningMenu);
+            break;
+    
+        // ✅ Исполнение бюджета
+        case 'BUDGET_EXECUTION':
+            await handleVideoSelection(chatId, message, 'budgetExecution', sendBudgetExecutionMenu);
+            break;
+    
+        // ❓ Ответы на самые популярные вопросы
+        case 'POPULAR_QUESTIONS_VIDEOS':
+            await handleVideoSelection(chatId, message, 'popularQuestions', sendPopularQuestionsMenu);
+            break;
+    
+        // 🗺️ Выберите область РК
         case 'CHOOSE_REGION':
             await handleRegionSelection(chatId, message);
             break;
+    
+        // 📞 Контакты консультантов по областям
         case 'CONSULTANT_CONTACTS':
             await sendConsultantContact(chatId, message);
             break;
+    
+        // 💬 Связаться с оператором
         case 'OPERATOR_MODE':
-            await client.sendMessage(chatId, 
+            await client.sendMessage(chatId,
                 '🕒 Пожалуйста, подождите немного. Наш оператор скоро ответит.\n\n' +
                 '0️⃣ Для возврата в главное меню 🔙'
             );
-            break;            
+            break;
+    
+        // ❌ Неверный ввод
         default:
             await client.sendMessage(chatId, '❌ Неверный ввод. Пожалуйста, выберите номер из меню (0-7).');
             await sendMainMenu(chatId);
             break;
     }
 });
+    
+
+
+    
 
 function resetInactivityTimer(chatId) {
     if (inactivityTimers[chatId]) clearTimeout(inactivityTimers[chatId]);
@@ -161,10 +188,7 @@ async function handleMainMenuSelection(chatId, message) {
         '1': () => setStateAndSend(chatId, 'CHOOSE_REGION', sendRegionMenu),
         '2': () => setStateAndSend(chatId, 'BUDGET_PLANNING', sendBudgetPlanningMenu),
         '3': () => setStateAndSend(chatId, 'BUDGET_EXECUTION', sendBudgetExecutionMenu),
-        '4': async () => {
-            await sendVideo(chatId, videoLinks.signers);
-            await client.sendMessage(chatId, '0️⃣ Для возврата в главное меню 🔙');
-        },
+        '4': () => setStateAndSend(chatId, 'POPULAR_QUESTIONS_VIDEOS', sendPopularQuestionsMenu),  // 🆕 Изменено: используем состояние и меню для подписантов
         '5': () => setStateAndSend(chatId, 'CONSULTANT_CONTACTS', sendRegionMenu),
         '6': () => sendTechnicalSupportContacts(chatId),
         '7': () => setStateAndSend(chatId, 'OPERATOR_MODE', () => client.sendMessage(chatId, 
@@ -179,21 +203,37 @@ async function handleMainMenuSelection(chatId, message) {
     }
 }
 
+
+// 🛠️ Универсальная функция для обработки выбора видео
+async function handleVideoSelection(chatId, message, section, menuFunction) {
+    const link = videoLinks[section][message];
+    if (link) {
+        await sendVideo(chatId, link);  // Отправляем ссылку на видео
+    }
+    await menuFunction(chatId);  // Сразу отправляем меню раздела
+}
+
 async function handleBudgetPlanningSelection(chatId, message) {
-    const link = videoLinks.budgetPlanning[message];
-    if (link) await sendVideo(chatId, link);
-    await sendBudgetPlanningMenu(chatId);
+    await handleVideoSelection(chatId, message, 'budgetPlanning', sendBudgetPlanningMenu);
 }
 
 async function handleBudgetExecutionSelection(chatId, message) {
-    const link = videoLinks.budgetExecution[message];
-    if (link) await sendVideo(chatId, link);
-    await sendBudgetExecutionMenu(chatId);
+    await handleVideoSelection(chatId, message, 'budgetExecution', sendBudgetExecutionMenu);
+}
+
+async function handlePopularQuestionsSelection(chatId, message) {  // 🆕 Для подписантов
+    await handleVideoSelection(chatId, message, 'popularQuestions', sendPopularQuestionsMenu);
 }
 
 async function sendVideo(chatId, link) {
-    if (link) await client.sendMessage(chatId, `🎥 Видеоинструкция: ${link}`);
+    if (link) {
+        await client.sendMessage(chatId, 
+            '🎥 Посмотрите видеоинструкцию по ссылке\n\n' +
+            `👉 ${link} 👈`
+        );
+    }
 }
+
 
 async function sendConsultantContact(chatId, message) {
     const contact = consultantContacts[message];
@@ -293,6 +333,19 @@ function sendBudgetExecutionMenu(chatId) {
         '3️⃣ ● Заявки на внесение изменений и дополнений\n' +
         '4️⃣ ● Уточненный план\n' +
         '5️⃣ ● Мониторинг исполнения. Казначейские формы\n\n' +
+        '0️⃣ 🔙 Главное меню'
+    );
+}
+
+
+function sendPopularQuestionsMenu(chatId) {
+    client.sendMessage(chatId, 
+        '❓ Ответы на самые популярные вопросы:\n\n' +
+        '1️⃣ ● Как АБП вернуть БЗ на доработку в ГУ?\n' +
+        '2️⃣ ● Почему я не могу ввести данные в формах расчета? (Форма расчетов)\n' +
+        '3️⃣ ● Как продублировать БЗ на последующие года планового периода? (Форма расчетов)\n' +
+        '4️⃣ ● Как ГУ отправить БЗ на согласование в АБП?\n' +
+        '5️⃣ ● Как в досье поменять год? (Штатное расписание)\n\n' +
         '0️⃣ 🔙 Главное меню'
     );
 }

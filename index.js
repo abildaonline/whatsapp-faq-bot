@@ -1,6 +1,21 @@
 const { Client, LocalAuth } = require('whatsapp-web.js');
 const qrcode = require('qrcode-terminal');
 
+// Логирование всех событий
+function logEvent(chatId, eventDescription) {
+    const timestamp = new Date().toLocaleString('ru-RU', { timeZone: 'Asia/Almaty' });
+    console.log(`[${timestamp}] [${chatId}] ${eventDescription}`);
+}
+
+// Безопасная отправка сообщений
+async function safeSendMessage(chatId, text) {
+    try {
+        await client.sendMessage(chatId, text);  // тут должен быть вызов client.sendMessage
+    } catch (error) {
+        console.error(`❌ Ошибка при отправке сообщения пользователю ${chatId}:`, error);
+    }
+}
+
 const client = new Client({
     authStrategy: new LocalAuth()
 });
@@ -114,10 +129,14 @@ client.on('message', async msg => {
     const chatId = msg.from;
     const message = msg.body.trim();
 
+    // Лог о полученном сообщении
+    console.log(`[INFO] Получено сообщение от ${chatId}: ${message}`);
+
     resetInactivityTimer(chatId);
 
     // Инициализация состояния пользователя, если оно отсутствует
     if (!userState[chatId]) {
+        console.log(`[INFO] Новый пользователь ${chatId}, показываю главное меню.`);
         userState[chatId] = 'MAIN_MENU';
         await sendMainMenu(chatId);
         return;
@@ -125,6 +144,7 @@ client.on('message', async msg => {
 
     // Возврат в главное меню при вводе 0
     if (message === '0') {
+        console.log(`[INFO] Пользователь ${chatId} вернулся в главное меню.`);
         userState[chatId] = 'MAIN_MENU';
         await sendMainMenu(chatId);
         return;
@@ -132,33 +152,40 @@ client.on('message', async msg => {
 
     // Проверка на случай, если состояние пользователя вдруг отсутствует (практически невозможно)
     if (!userState[chatId]) {
-        await client.sendMessage(chatId, '❌ Неверный ввод. Пожалуйста, отправьте 0️⃣ для возврата в главное меню 🔙');
+        await safeSendMessage(chatId, '❌ Неверный ввод. Пожалуйста, отправьте 0️⃣ для возврата в главное меню 🔙');
         return;
     }
 
     switch (userState[chatId]) {
         // 🏠 Главное меню
         case 'MAIN_MENU':
+            console.log(`[INFO] Пользователь ${chatId} в главном меню.`);
             if (/^[1-8]$/.test(message)) {  // Проверяем, является ли сообщение одной цифрой от 1 до 8
+                console.log(`[INFO] Пользователь ${chatId} выбрал пункт главного меню: ${message}`);
                 await handleMainMenuSelection(chatId, message);
             } else {
-                await client.sendMessage(chatId, '❌ Неправильный номер. Пожалуйста, выберите цифру из списка');
+                console.log(`[WARN] Пользователь ${chatId} ввел некорректную цифру в главном меню: ${message}`);
+                await safeSendMessage(chatId, '❌ Неправильный номер. Пожалуйста, выберите цифру из списка');
             }
             break;
     
         // 👤 Зарегистрироваться в eAkimat365
         case 'CHOOSE_REGION_FOR_REGISTRATION':  // 🆕 Новый кейс для регистрации
+            console.log(`[INFO] Пользователь ${chatId} выбирает регион для регистрации.`);
             await handleRegionSelection(chatId, message);  // 🟢 Отправляем инструкцию по регистрации
             break;
     
         // 🗺️ Вход в eAkimat365 (выбор региона)
         case 'CHOOSE_REGION':
+            console.log(`[INFO] Пользователь ${chatId} выбирает регион для входа.`);
             await handleRegionSelection(chatId, message);  // 🟢 Отправляем инструкцию по входу
             break;
     
         // 💰 Бюджетное планирование
         case 'BUDGET_PLANNING':
+            console.log(`[INFO] Пользователь ${chatId} в разделе "Бюджетное планирование".`);
             if (/^[0-5]$/.test(message)) {  // Проверяем, что введена цифра от 0 до 5
+                console.log(`[INFO] Пользователь ${chatId} выбрал пункт: ${message}`);
                 if (message === '0') {
                     userState[chatId] = 'MAIN_MENU';  // Если 0 — возвращаем в главное меню
                     await sendMainMenu(chatId);
@@ -166,14 +193,17 @@ client.on('message', async msg => {
                     await handleVideoSelection(chatId, message, 'budgetPlanning', sendBudgetPlanningMenu);
                 }
             } else {
-                await client.sendMessage(chatId, '❌ Неправильный номер. Пожалуйста, выберите цифру из списка');
+                console.log(`[WARN] Пользователь ${chatId} ввел некорректную цифру: ${message}`);
+                await safeSendMessage(chatId, '❌ Неправильный номер. Пожалуйста, выберите цифру из списка');
                 // ❌ Меню не показываем, только ошибку!
             }
             break;        
     
         // ✅ Исполнение бюджета
         case 'BUDGET_EXECUTION':
+            console.log(`[INFO] Пользователь ${chatId} в разделе "Исполнение бюджета".`);
             if (/^[0-5]$/.test(message)) {  // Проверяем, что введена цифра от 0 до 5
+                console.log(`[INFO] Пользователь ${chatId} выбрал пункт: ${message}`);
                 if (message === '0') {
                     userState[chatId] = 'MAIN_MENU';  // Если 0 — возвращаем в главное меню
                     await sendMainMenu(chatId);
@@ -181,42 +211,52 @@ client.on('message', async msg => {
                     await handleVideoSelection(chatId, message, 'budgetExecution', sendBudgetExecutionMenu);
                 }
             } else {
-                await client.sendMessage(chatId, '❌ Неправильный номер. Пожалуйста, выберите цифру из списка');
+                console.log(`[WARN] Пользователь ${chatId} ввел некорректную цифру: ${message}`);
+                await safeSendMessage(chatId, '❌ Неправильный номер. Пожалуйста, выберите цифру из списка');
                 // ❌ Меню не показываем, только ошибку!
             }
             break;
     
         // ❓ Ответы на самые популярные вопросы
         case 'POPULAR_QUESTIONS_VIDEOS':
+            console.log(`[INFO] Пользователь ${chatId} смотрит популярные вопросы.`);
             if (/^([0-9]|1[0-9]|20|21)$/.test(message)) {  // Проверяем, является ли сообщение цифрой от 0 до 21
+                console.log(`[INFO] Пользователь ${chatId} выбрал видео номер: ${message}`);
                 await handleVideoSelection(chatId, message, 'popularQuestions', sendPopularQuestionsMenu);
             } else {
-                await client.sendMessage(chatId, '❌ Неправильный номер. Пожалуйста, выберите цифру из списка');
+                console.log(`[WARN] Пользователь ${chatId} ввел некорректную цифру: ${message}`);
+                await safeSendMessage(chatId, '❌ Неправильный номер. Пожалуйста, выберите цифру из списка');
             }
             break;
     
         // 📞 Контакты консультантов по областям
         case 'CONSULTANT_CONTACTS':
+            console.log(`[INFO] Пользователь ${chatId} в разделе "Контакты консультантов".`);
             if (/^[0-7]$/.test(message)) {  // Проверяем, является ли сообщение цифрой от 0 до 7
+                console.log(`[INFO] Пользователь ${chatId} выбрал область: ${message}`);
                 await sendConsultantContact(chatId, message);
             } else {
-                await client.sendMessage(chatId, '❌ Неправильный номер. Пожалуйста, выберите цифру из списка');
+                console.log(`[WARN] Пользователь ${chatId} ввел некорректную цифру: ${message}`);
+                await safeSendMessage(chatId, '❌ Неправильный номер. Пожалуйста, выберите цифру из списка');
             }
             break;
     
             case 'TECH_SUPPORT':
+                console.log(`[INFO] Пользователь ${chatId} в разделе "Техническая поддержка".`);
                 if (message === '0') {
                     userState[chatId] = 'MAIN_MENU';  // Возвращаем в главное меню
                     await sendMainMenu(chatId);
                 } else {
-                    await client.sendMessage(chatId, '❌ Неправильный номер. Пожалуйста, выберите цифру из списка');
+                    console.log(`[WARN] Пользователь ${chatId} ввел некорректную цифру: ${message}`);
+                    await safeSendMessage(chatId, '❌ Неправильный номер. Пожалуйста, выберите цифру из списка');
                 }
                 break;            
     
         // 💬 Связаться с оператором
         case 'OPERATOR_MODE':
+            console.log(`[INFO] Пользователь ${chatId} ждет оператора.`);
             if (!operatorMessageSent[chatId]) {  // Проверяем, отправлено ли сообщение ранее
-                await client.sendMessage(chatId,
+                await safeSendMessage(chatId,
                     '🕒 Пожалуйста, подождите немного. Наш оператор скоро ответит.\n\n' +
                     '0️⃣ Для возврата в главное меню 🔙'
                 );
@@ -226,7 +266,8 @@ client.on('message', async msg => {
     
         // ❌ Неверный ввод
         default:
-            await client.sendMessage(chatId, '❌ Неверный ввод. Пожалуйста, выберите номер из меню (0-8).');
+            console.log(`[WARN] Пользователь ${chatId} попал в неизвестное состояние: ${userState[chatId]}`);
+            await safeSendMessage(chatId, '❌ Неверный ввод. Пожалуйста, выберите номер из меню (0-8).');
             await sendMainMenu(chatId);
             break;
     }
@@ -238,12 +279,15 @@ client.on('message', async msg => {
 
 function resetInactivityTimer(chatId) {
     if (inactivityTimers[chatId]) clearTimeout(inactivityTimers[chatId]);
+    
     inactivityTimers[chatId] = setTimeout(() => {
-        delete userState[chatId];
-        client.sendMessage(chatId, '⌛ Время ожидания истекло. Возвращаю в главное меню 🔙');
+        console.log(`[INFO] Автосброс пользователя ${chatId} через 15 минут бездействия`);
+        userState[chatId] = 'MAIN_MENU';  // Просто сбрасываем в главное меню
+        safeSendMessage(chatId, '⌛ Время ожидания истекло. Возвращаю в главное меню 🔙');
         sendMainMenu(chatId);
-    }, 30 * 60 * 1000); // 30 минут в миллисекундах
+    }, 15 * 60 * 1000); // 15 минут в миллисекундах
 }
+
 
 function setStateAndSend(chatId, state, sendFunction) {
     userState[chatId] = state;
@@ -262,7 +306,7 @@ async function handleMainMenuSelection(chatId, message) {
             userState[chatId] = 'TECH_SUPPORT';
             sendTechnicalSupportContacts(chatId);
         },
-        '8': () => setStateAndSend(chatId, 'OPERATOR_MODE', () => client.sendMessage(chatId, 
+        '8': () => setStateAndSend(chatId, 'OPERATOR_MODE', () => safeSendMessage(chatId, 
         '✍️ Пожалуйста, напишите свой вопрос. Наш оператор ответит вам как можно скорее. Мы ценим ваше терпение и постараемся помочь в ближайшее время 😊\n\n' +
         '0️⃣ Для возврата в главное меню 🔙'))
     };
@@ -298,7 +342,7 @@ async function handlePopularQuestionsSelection(chatId, message) {
 
 async function sendVideo(chatId, link) {
     if (link) {
-        await client.sendMessage(chatId, 
+        await safeSendMessage(chatId, 
             '🎥 Посмотрите видеоинструкцию по ссылке:\n\n' +
             `${link}`
         );
@@ -309,8 +353,8 @@ async function sendVideo(chatId, link) {
 async function sendConsultantContact(chatId, message) {
     const contact = consultantContacts[message];
     if (contact) {
-        await client.sendMessage(chatId, contact);
-        await client.sendMessage(chatId, 
+        await safeSendMessage(chatId, contact);
+        await safeSendMessage(chatId, 
             '🔄 Для выбора другой области отправьте её номер\n' +
             '0️⃣ Для возврата в главное меню 🔙'
         );
@@ -318,7 +362,7 @@ async function sendConsultantContact(chatId, message) {
 }
 
 async function sendRegistrationInstructions(chatId, region) {
-    await client.sendMessage(chatId, 
+    await safeSendMessage(chatId, 
         `📍 ${region.name}\n\n` +
         `👤 *Как зарегистрироваться*\n` +
         `1. Перейдите по ссылке: ${region.link}\n` +
@@ -353,7 +397,7 @@ async function handleRegionSelection(chatId, message) {
         } else if (userState[chatId] === 'CHOOSE_REGION') {
             // 🟢 Если пользователь выбрал вход, отправляем инструкцию по входу
             if (message === '7') {  // Проверяем, выбрана ли Актюбинская область (ключ '7')
-                await client.sendMessage(chatId, 
+                await safeSendMessage(chatId, 
                     `📍 ${region.name}\n` +
                     `🌐 ${region.link}\n\n` +
                     `🔑 Способ входа\n\n` +
@@ -370,7 +414,7 @@ async function handleRegionSelection(chatId, message) {
                     `0️⃣ Для возврата в главное меню 🔙`
                 );
             } else {
-                await client.sendMessage(chatId, 
+                await safeSendMessage(chatId, 
                     `📍 ${region.name}\n` +
                     `🌐 ${region.link}\n\n` +
                     `🔑 Способы входа\n\n` +
@@ -395,14 +439,14 @@ async function handleRegionSelection(chatId, message) {
             await sendRegionMenu(chatId);  // Если состояние не определено
         }
     } else {
-        await client.sendMessage(chatId, '❌ Неправильный номер. Пожалуйста, выберите цифру из списка');
+        await safeSendMessage(chatId, '❌ Неправильный номер. Пожалуйста, выберите цифру из списка');
     }
 }
 
 
 
 function sendMainMenu(chatId) {
-    client.sendMessage(chatId, 
+    safeSendMessage(chatId, 
         '👋 Добро пожаловать в службу поддержки eAkimat365\n\n' +
         '🏠 Главное меню\n\n' +
         'Чтобы перейти в нужный раздел, отправьте соответствующую цифру 👇\n\n' +
@@ -419,7 +463,7 @@ function sendMainMenu(chatId) {
 
 
 function sendRegionMenu(chatId) {
-    client.sendMessage(chatId, 
+    safeSendMessage(chatId, 
         '🗺️ Выберите область РК\n\n' +
         'Чтобы перейти в нужный раздел, отправьте соответствующую цифру 👇\n\n' +
         '1️⃣ 🌳 Павлодарская область\n' +
@@ -435,7 +479,7 @@ function sendRegionMenu(chatId) {
 
 
 function sendBudgetPlanningMenu(chatId) {
-    client.sendMessage(chatId, 
+    safeSendMessage(chatId, 
         '💰 Бюджетное планирование\n\n' +
         'Чтобы перейти в нужный раздел, отправьте соответствующую цифру 👇\n\n' +
         '1️⃣ ● Свод по АБП/ГУ/ГККП\n' +
@@ -449,7 +493,7 @@ function sendBudgetPlanningMenu(chatId) {
 
 
 function sendBudgetExecutionMenu(chatId) {
-    client.sendMessage(chatId, 
+    safeSendMessage(chatId, 
         '✅ Исполнение бюджета\n\n' +
         'Чтобы перейти в нужный раздел, отправьте соответствующую цифру 👇\n\n' +
         '1️⃣ ● Индивидуальный план финансирования\n' +
@@ -463,7 +507,7 @@ function sendBudgetExecutionMenu(chatId) {
 
 
 function sendPopularQuestionsMenu(chatId) {
-    client.sendMessage(chatId, 
+    safeSendMessage(chatId, 
         '❓ Ответы на самые популярные вопросы\n\n' +
         'Чтобы перейти в нужный раздел, отправьте соответствующую цифру 👇\n\n' +
         '1️⃣ ● Как АБП вернуть БЗ на доработку в ГУ?\n' +
@@ -493,7 +537,7 @@ function sendPopularQuestionsMenu(chatId) {
 
 
 function sendTechnicalSupportContacts(chatId) {
-    client.sendMessage(chatId,
+    safeSendMessage(chatId,
         'Cлужба технической поддержки eAkimat 365\n\n' +
         '📧 help@csi.kz\n' +
         '📞 +7 (7172) 97-22-42\n' +

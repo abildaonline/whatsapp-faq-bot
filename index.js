@@ -139,7 +139,11 @@ client.on('message', async msg => {
     switch (userState[chatId]) {
         // 🏠 Главное меню
         case 'MAIN_MENU':
-            await handleMainMenuSelection(chatId, message);
+            if (/^[1-8]$/.test(message)) {  // Проверяем, является ли сообщение одной цифрой от 1 до 8
+                await handleMainMenuSelection(chatId, message);
+            } else {
+                await client.sendMessage(chatId, '❌ Неправильный номер. Пожалуйста, выберите цифру из списка');
+            }
             break;
     
         // 👤 Зарегистрироваться в eAkimat365
@@ -154,22 +158,50 @@ client.on('message', async msg => {
     
         // 💰 Бюджетное планирование
         case 'BUDGET_PLANNING':
-            await handleVideoSelection(chatId, message, 'budgetPlanning', sendBudgetPlanningMenu);
-            break;
+            if (/^[0-5]$/.test(message)) {  // Проверяем, что введена цифра от 0 до 5
+                if (message === '0') {
+                    userState[chatId] = 'MAIN_MENU';  // Если 0 — возвращаем в главное меню
+                    await sendMainMenu(chatId);
+                } else {
+                    await handleVideoSelection(chatId, message, 'budgetPlanning', sendBudgetPlanningMenu);
+                }
+            } else {
+                await client.sendMessage(chatId, '❌ Неправильный номер. Пожалуйста, выберите цифру из списка');
+                // ❌ Меню не показываем, только ошибку!
+            }
+            break;        
     
         // ✅ Исполнение бюджета
         case 'BUDGET_EXECUTION':
-            await handleVideoSelection(chatId, message, 'budgetExecution', sendBudgetExecutionMenu);
+            if (/^[0-5]$/.test(message)) {  // Проверяем, что введена цифра от 0 до 5
+                if (message === '0') {
+                    userState[chatId] = 'MAIN_MENU';  // Если 0 — возвращаем в главное меню
+                    await sendMainMenu(chatId);
+                } else {
+                    await handleVideoSelection(chatId, message, 'budgetExecution', sendBudgetExecutionMenu);
+                }
+            } else {
+                await client.sendMessage(chatId, '❌ Неправильный номер. Пожалуйста, выберите цифру из списка');
+                // ❌ Меню не показываем, только ошибку!
+            }
             break;
     
         // ❓ Ответы на самые популярные вопросы
         case 'POPULAR_QUESTIONS_VIDEOS':
-            await handleVideoSelection(chatId, message, 'popularQuestions', sendPopularQuestionsMenu);
+            if (/^[0-21]$/.test(message)) {  // Проверяем, является ли сообщение цифрой от 0 до 5
+                await handleVideoSelection(chatId, message, 'popularQuestions', sendPopularQuestionsMenu);
+            } else {
+                await client.sendMessage(chatId, '❌ Неправильный номер. Пожалуйста, выберите цифру из списка.');
+            }
             break;
     
         // 📞 Контакты консультантов по областям
         case 'CONSULTANT_CONTACTS':
-            await sendConsultantContact(chatId, message);
+            if (/^[0-7]$/.test(message)) {  // Проверяем, является ли сообщение цифрой от 0 до 7
+                await sendConsultantContact(chatId, message);
+            } else {
+                await client.sendMessage(chatId, '❌ Неправильный номер. Пожалуйста, выберите цифру из списка.');
+            }
             break;
     
         // 💬 Связаться с оператором
@@ -351,7 +383,7 @@ async function handleRegionSelection(chatId, message) {
             await sendRegionMenu(chatId);  // Если состояние не определено
         }
     } else {
-        await client.sendMessage(chatId, '❌ Неправильный номер. Пожалуйста, выберите цифру из списка.');
+        await client.sendMessage(chatId, '❌ Неправильный номер. Пожалуйста, выберите цифру из списка');
     }
 }
 

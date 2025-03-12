@@ -128,6 +128,22 @@ client.on('message', async msg => {
         console.log(`[INFO] Новый пользователь ${chatId}, показываю главное меню.`);
         userState[chatId] = 'MAIN_MENU';
         await sendMainMenu(chatId);
+
+        // Устанавливаем состояние, чтобы игнорировать два первых сообщения (автоответ WhatsApp)
+        userState[chatId] = 'IGNORE_FIRST_TWO_MESSAGES';
+        return;
+    }
+
+    // Если это первое или второе сообщение после главного меню, пропускаем его
+    if (userState[chatId] === 'IGNORE_FIRST_TWO_MESSAGES') {
+        console.log(`[INFO] Пропускаем первое сообщение от ${chatId}, чтобы избежать ошибки WhatsApp.`);
+        userState[chatId] = 'IGNORE_SECOND_MESSAGE';
+        return;
+    }
+
+    if (userState[chatId] === 'IGNORE_SECOND_MESSAGE') {
+        console.log(`[INFO] Пропускаем второе сообщение от ${chatId}, чтобы избежать ошибки WhatsApp.`);
+        userState[chatId] = 'MAIN_MENU'; // После второго сообщения возвращаем в обычный режим
         return;
     }
 
